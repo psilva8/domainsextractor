@@ -225,6 +225,58 @@
             color: #6b7280; 
             margin-top: 10px; 
         }
+        .faq-container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+        }
+        .faq-item { 
+            background: rgba(255, 255, 255, 0.9); 
+            border: 1px solid #e5e7eb; 
+            border-radius: 12px; 
+            margin-bottom: 15px; 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        .faq-item:hover { 
+            background: rgba(255, 255, 255, 1); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .faq-header { 
+            padding: 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .faq-header h3 { 
+            color: #1f2937; 
+            font-size: 1.1rem; 
+            font-weight: 600; 
+            margin: 0; 
+        }
+        .faq-toggle { 
+            color: #4f46e5; 
+            font-size: 18px; 
+            transition: transform 0.3s ease; 
+        }
+        .faq-toggle.expanded { 
+            transform: rotate(180deg); 
+        }
+        .faq-content { 
+            padding: 0 20px; 
+            max-height: 0; 
+            overflow: hidden; 
+            transition: all 0.3s ease; 
+        }
+        .faq-content.expanded { 
+            padding: 0 20px 20px 20px; 
+            max-height: 200px; 
+        }
+        .faq-content p { 
+            color: #6b7280; 
+            line-height: 1.6; 
+            margin: 0; 
+        }
     </style>
 </head>
 <body>
@@ -311,6 +363,78 @@
                         <li>✅ IP addresses: 127.0.0.1, IPv6</li>
                         <li>✅ Localhost: http://localhost:3000</li>
                     </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="features" style="margin-top: 30px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="width: 48px; height: 48px; background: #4f46e5; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                    <span style="font-size: 24px;">❓</span>
+                </div>
+                <h2 style="color: #4f46e5; margin-bottom: 10px;">Frequently Asked Questions</h2>
+                <p style="color: #6b7280; max-width: 600px; margin: 0 auto;">Everything you need to know about our domain extraction tool</p>
+            </div>
+
+            <div class="faq-container">
+                <div class="faq-item" onclick="toggleFaq('online')">
+                    <div class="faq-header">
+                        <div style="display: flex; align-items: center;">
+                            <span style="font-size: 20px; margin-right: 12px;">🌐</span>
+                            <h3>Domain Extractor Online</h3>
+                        </div>
+                        <span class="faq-toggle" id="toggle-online">▼</span>
+                    </div>
+                    <div class="faq-content" id="content-online">
+                        <p>Yes! Our domain extractor works completely online in your browser. No downloads, installations, or signup required. Simply paste your text and extract domains instantly from any device with internet access.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" onclick="toggleFaq('email')">
+                    <div class="faq-header">
+                        <div style="display: flex; align-items: center;">
+                            <span style="font-size: 20px; margin-right: 12px;">📧</span>
+                            <h3>Domain Email Extractor</h3>
+                        </div>
+                        <span class="faq-toggle" id="toggle-email">▼</span>
+                    </div>
+                    <div class="faq-content" id="content-email">
+                        <p>Absolutely! Our tool intelligently extracts domains from email addresses. Paste emails like "user@example.com" and get clean domains like "example.com" with proper validation and formatting.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" onclick="toggleFaq('name')">
+                    <div class="faq-header">
+                        <div style="display: flex; align-items: center;">
+                            <span style="font-size: 20px; margin-right: 12px;">🔗</span>
+                            <h3>Domain Name Extractor</h3>
+                        </div>
+                        <span class="faq-toggle" id="toggle-name">▼</span>
+                    </div>
+                    <div class="faq-content" id="content-name">
+                        <p>Extract clean domain names from any text containing URLs, links, or domain references. Handles complex cases like subdomains, ports, paths, and removes unwanted characters automatically.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" onclick="toggleFaq('extension')">
+                    <div class="faq-header">
+                        <div style="display: flex; align-items: center;">
+                            <span style="font-size: 20px; margin-right: 12px;">🧩</span>
+                            <h3>Domain Extractor Chrome Extension</h3>
+                        </div>
+                        <span class="faq-toggle" id="toggle-extension">▼</span>
+                    </div>
+                    <div class="faq-content" id="content-extension">
+                        <p>While we don't currently offer a Chrome extension, our web tool works perfectly in any browser! Bookmark our page for quick access, or use our mobile-responsive design on any device.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; text-align: center;">
+                <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 12px; padding: 20px; max-width: 600px; margin: 0 auto;">
+                    <p style="font-weight: bold; margin-bottom: 8px;">💡 Pro Tip</p>
+                    <p style="opacity: 0.9; margin: 0;">Use our export features to save results as CSV, PDF, or Excel files for easy data management and sharing.</p>
                 </div>
             </div>
         </div>
@@ -519,6 +643,19 @@
                 '<p>Results will appear here after extraction</p>' +
                 '<p style="font-size: 0.9rem; margin-top: 10px;">Start by pasting some text or loading the example</p>' +
                 '</div>';
+        }
+
+        function toggleFaq(id) {
+            const content = document.getElementById('content-' + id);
+            const toggle = document.getElementById('toggle-' + id);
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                toggle.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                toggle.classList.add('expanded');
+            }
         }
     </script>
 </body>
