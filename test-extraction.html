@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Domain Extraction Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; line-height: 1.6; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .input { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        .output { background: #e8f5e8; padding: 10px; margin: 10px 0; }
+        .current { background: #ffe8e8; padding: 10px; margin: 10px 0; }
+        .improved { background: #e8e8ff; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Domain Extraction Test & Debug</h1>
+
+    <script>
+        // Current implementation
+        const currentDomainRegex = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}/gi;
+        
+        // Improved implementation
+        const improvedDomainRegex = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9]([a-zA-Z0-9-]{1,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?=\s|$|[^\w.-])/gi;
+        
+        function extractDomainsOld(text, options = {}) {
+            const {
+                includeSubdomains = true,
+                removeDuplicates = true,
+                includeWww = false,
+                sortResults = true
+            } = options;
+
+            if (!text || typeof text !== 'string') return [];
+
+            const matches = text.match(currentDomainRegex) || [];
+            
+            let domains = matches.map(match => {
+                let domain = match.replace(/^https?:\/\//, '');
+                if (!includeWww) domain = domain.replace(/^www\./, '');
+                domain = domain.split('/')[0].split('?')[0].split('#')[0];
+                
+                if (!includeSubdomains) {
+                    const parts = domain.split('.');
+                    if (parts.length > 2) domain = parts.slice(-2).join('.');
+                }
+                
+                return domain.toLowerCase();
+            });
+
+            if (removeDuplicates) domains = [...new Set(domains)];
+            if (sortResults) domains.sort();
+            return domains;
+        }
+
+        function extractDomainsImproved(text, options = {}) {
+            const {
+                includeSubdomains = true,
+                removeDuplicates = true,
+                includeWww = false,
+                sortResults = true
+            } = options;
+
+            if (!text || typeof text !== 'string') return [];
+
+            // More precise regex that handles word boundaries better
+            const domainPattern = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?=\s|$|[^\w.-]|[.][^a-zA-Z])/gi;
+            
+            const matches = [];
+            let match;
+            
+            while ((match = domainPattern.exec(text)) !== null) {
+                let domain = match[0];
+                
+                // Remove protocol
+                domain = domain.replace(/^https?:\/\//, '');
+                
+                // Handle www
+                if (!includeWww) {
+                    domain = domain.replace(/^www\./, '');
+                }
+                
+                // Clean up trailing punctuation and paths
+                domain = domain.replace(/[.,;:!?]+$/, ''); // Remove trailing punctuation
+                domain = domain.split('/')[0].split('?')[0].split('#')[0];
+                
+                // Validate domain structure
+                const domainParts = domain.split('.');
+                if (domainParts.length >= 2 && 
+                    domainParts.every(part => part.length > 0 && /^[a-zA-Z0-9-]+$/.test(part)) &&
+                    /^[a-zA-Z]{2,}$/.test(domainParts[domainParts.length - 1])) {
+                    
+                    // Handle subdomains
+                    if (!includeSubdomains && domainParts.length > 2) {
+                        domain = domainParts.slice(-2).join('.');
+                    }
+                    
+                    matches.push(domain.toLowerCase());
+                }
+            }
+
+            let domains = matches;
+            if (removeDuplicates) domains = [...new Set(domains)];
+            if (sortResults) domains.sort();
+            return domains;
+        }
+
+        // Test cases
+        const testCases = [
+            "Visit https://www.google.com and check github.com",
+            "Email me at user@example.com or visit example.org",
+            "Check out docs.microsoft.com, stackoverflow.com, and reddit.com/r/programming",
+            "Go to https://subdomain.example.com/path?param=value#anchor",
+            "Visit example.com, www.test.org, and https://another-site.net",
+            "Invalid cases: 192.168.1.1, .com, com., example..com",
+            "Edge cases: example.com. and (parentheses.com) and quotes 'site.org' \"another.net\"",
+            "With punctuation: Visit site.com, then go to other.org! Finally check last.net?",
+            "Versioning: v2.example.com and api-v1.test.org",
+            "Numbers: site123.com and 123site.org and test-123.net"
+        ];
+
+        testCases.forEach((testCase, index) => {
+            const currentResult = extractDomainsOld(testCase);
+            const improvedResult = extractDomainsImproved(testCase);
+            
+            document.write(`
+                <div class="test">
+                    <h3>Test Case ${index + 1}</h3>
+                    <div class="input"><strong>Input:</strong> ${testCase}</div>
+                    <div class="current"><strong>Current Result:</strong> [${currentResult.join(', ')}]</div>
+                    <div class="improved"><strong>Improved Result:</strong> [${improvedResult.join(', ')}]</div>
+                    ${JSON.stringify(currentResult) !== JSON.stringify(improvedResult) ? '<strong style="color: red;">⚠️ DIFFERENCE DETECTED</strong>' : '<strong style="color: green;">✅ SAME RESULT</strong>'}
+                </div>
+            `);
+        });
+    </script>
+</body>
+</html>
