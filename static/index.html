@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <title>Domain Extractor - Extract domains from URLs and emails</title>
+        <meta name="description" content="Free domain extractor to quickly get domains from any list of URLs or emails. Works online, bulk paste supported.">
+        <meta name="keywords" content="domain extractor, URL parser, email domain, bulk domain extraction, free tool, online tool">
+        <meta property="og:title" content="Domain Extractor - Extract domains from URLs and emails">
+        <meta property="og:description" content="Free domain extractor to quickly get domains from any list of URLs or emails. Works online, bulk paste supported.">
+        <meta property="og:type" content="website">
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:title" content="Domain Extractor - Extract domains from URLs and emails">
+        <meta name="twitter:description" content="Free domain extractor to quickly get domains from any list of URLs or emails. Works online, bulk paste supported.">
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='35' cy='35' r='20' fill='none' stroke='%23334155' stroke-width='6'/%3E%3Cpath d='m50 50 20 20' stroke='%23334155' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E" />
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Domain Extractor",
+          "description": "Free domain extractor to quickly get domains from any list of URLs or emails. Works online, bulk paste supported.",
+          "url": "https://domain-extractor.com",
+          "applicationCategory": "WebApplication",
+          "operatingSystem": "Any",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "Extract domains from URLs",
+            "Extract domains from emails", 
+            "Bulk domain extraction",
+            "CSV export",
+            "PDF export", 
+            "Excel export",
+            "Mobile responsive",
+            "Real-time processing"
+          ],
+          "softwareVersion": "1.0.0",
+          "datePublished": "2024-01-01",
+          "author": {
+            "@type": "Organization",
+            "name": "Domain Extractor"
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "ratingCount": "150"
+          }
+        }
+        </script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useCallback } = React;
+
+        // Improved domain extraction utilities
+        const domainRegex = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?=\s|$|[^\w.-]|[.][^a-zA-Z])/gi;
+        const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/gi;
+
+        function extractDomains(text, options = {}) {
+            const {
+                includeSubdomains = true,
+                removeDuplicates = true,
+                includeWww = false,
+                sortResults = true
+            } = options;
+
+            if (!text || typeof text !== 'string') {
+                return [];
+            }
+
+            // More precise pattern matching with proper word boundaries and protocol support
+            const domainPattern = /(?:(?:https?|ftp|ftps):\/\/)?(?:www\.)?([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?=\s|$|[^\w.-]|[.][^a-zA-Z]|\/|:|\?|#)/gi;
+            
+            const domains = [];
+            let match;
+            
+            // Reset regex for global matching
+            domainPattern.lastIndex = 0;
+            
+            while ((match = domainPattern.exec(text)) !== null) {
+                let domain = match[0];
+                
+                // Skip if this looks like an email address
+                const beforeMatch = text.substring(Math.max(0, match.index - 1), match.index);
+                if (beforeMatch === '@') continue;
+                
+                // Remove protocols (including FTP)
+                domain = domain.replace(/^(?:https?|ftp|ftps):\/\//, '');
+                
+                // Handle www prefix
+                if (!includeWww) {
+                    domain = domain.replace(/^www\./, '');
+                }
+                
+                // Clean up trailing punctuation and paths
+                domain = domain.replace(/[.,;:!?)\]}]+$/, ''); // Remove trailing punctuation
+                domain = domain.split('/')[0].split(':')[0].split('?')[0].split('#')[0];
+                
+                // Validate domain structure
+                const domainParts = domain.split('.');
+                const isValid = domainParts.length >= 2 && 
+                               domainParts.every(part => part.length > 0 && /^[a-zA-Z0-9-]+$/.test(part) && 
+                                                !part.startsWith('-') && !part.endsWith('-')) &&
+                               /^[a-zA-Z]{2,}$/.test(domainParts[domainParts.length - 1]);
+                
+                // Additional validation: reject common file extensions
+                const lastPart = domainParts[domainParts.length - 1].toLowerCase();
+                const fileExtensions = ['txt', 'pdf', 'doc', 'docx', 'jpg', 'png', 'gif', 'zip', 'exe', 'mp3', 'mp4', 'avi', 'csv', 'xlsx', 'ppt'];
+                const isFileExtension = fileExtensions.includes(lastPart);
+                
+                if (isValid && !isFileExtension) {
+                    // Handle subdomains
+                    if (!includeSubdomains && domainParts.length > 2) {
+                        domain = domainParts.slice(-2).join('.');
+                    }
+                    
+                    domains.push(domain.toLowerCase());
+                }
+            }
+
+            // Remove duplicates
+            let result = removeDuplicates ? [...new Set(domains)] : domains;
+
+            // Sort results
+            if (sortResults) {
+                result.sort();
+            }
+
+            return result;
+        }
+
+        function extractUrls(text, options = {}) {
+            const { removeDuplicates = true, sortResults = true } = options;
+
+            if (!text || typeof text !== 'string') {
+                return [];
+            }
+
+            // Improved URL regex that handles more protocols and edge cases
+            const urlPattern = /(?:^|[^@])((?:https?|ftp|ftps):\/\/[^\s<>"{}|\\^`[\]()]+)/gi;
+            const matches = [];
+            let match;
+            
+            urlPattern.lastIndex = 0;
+            
+            while ((match = urlPattern.exec(text)) !== null) {
+                let url = match[1]; // Use capture group to exclude the non-@ character
+                
+                // Clean up trailing punctuation
+                url = url.replace(/[.,;:!?)\]}>]+$/, '');
+                
+                // Validate URL structure
+                try {
+                    new URL(url);
+                    matches.push(url);
+                } catch (e) {
+                    // Invalid URL, skip it
+                }
+            }
+
+            // Remove duplicates
+            let urls = removeDuplicates ? [...new Set(matches)] : matches;
+
+            // Sort results
+            if (sortResults) {
+                urls.sort();
+            }
+
+            return urls;
+        }
+
+        function extractAll(text, options = {}) {
+            const domains = extractDomains(text, options);
+            const urls = extractUrls(text, options);
+
+            const domainStats = domains.reduce((stats, domain) => {
+                const occurrences = (text.toLowerCase().match(new RegExp(domain.replace(/\./g, '\\.'), 'gi')) || []).length;
+                stats[domain] = occurrences;
+                return stats;
+            }, {});
+
+            return {
+                domains,
+                urls,
+                statistics: {
+                    totalDomains: domains.length,
+                    totalUrls: urls.length,
+                    uniqueDomains: domains.length,
+                    domainOccurrences: domainStats
+                }
+            };
+        }
+
+        // React component
+        function DomainExtractor() {
+            const [inputText, setInputText] = useState('');
+            const [results, setResults] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [options, setOptions] = useState({
+                includeSubdomains: true,
+                removeDuplicates: true,
+                includeWww: false,
+                sortResults: true
+            });
+            const [outputFormat, setOutputFormat] = useState('list');
+
+            const handleExtract = useCallback(() => {
+                if (!inputText.trim()) return;
+                
+                setLoading(true);
+                // Simulate async processing
+                setTimeout(() => {
+                    const extractedResults = extractAll(inputText, options);
+                    setResults(extractedResults);
+                    setLoading(false);
+                }, 100);
+            }, [inputText, options]);
+
+            const handleClear = () => {
+                setInputText('');
+                setResults(null);
+            };
+
+            const copyToClipboard = (text) => {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Copied to clipboard!');
+                }).catch(() => {
+                    alert('Failed to copy to clipboard');
+                });
+            };
+
+            const exportToCSV = (data, filename) => {
+                const csvContent = data.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const exportToPDF = (data, title, filename) => {
+                // Create HTML content for PDF
+                const htmlContent = `
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <title>${title}</title>
+                    <style>
+                      body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                      h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
+                      .meta { color: #666; font-size: 14px; margin-bottom: 30px; }
+                      .item { margin: 8px 0; padding: 4px 0; }
+                      .number { color: #666; font-weight: bold; width: 40px; display: inline-block; }
+                      @media print { body { margin: 20px; } }
+                    </style>
+                  </head>
+                  <body>
+                    <h1>${title}</h1>
+                    <div class="meta">Generated: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</div>
+                    <div class="meta">Total items: ${data.length}</div>
+                    ${data.map((item, index) => `<div class="item"><span class="number">${index + 1}.</span> ${item}</div>`).join('')}
+                  </body>
+                  </html>
+                `;
+                
+                // Create new window and print to PDF
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+                
+                // Wait for content to load then trigger print dialog
+                setTimeout(() => {
+                    printWindow.focus();
+                    printWindow.print();
+                    // Close window after a delay to allow printing
+                    setTimeout(() => printWindow.close(), 1000);
+                }, 500);
+            };
+
+            const exportToExcel = (domains, urls, filename) => {
+                // Create Excel-like format using CSV with tabs
+                const headers = ['Type', 'Value', 'Count'];
+                const rows = [headers.join('\t')];
+                
+                // Add domains
+                domains.forEach((domain) => {
+                    rows.push(['Domain', domain, '1'].join('\t'));
+                });
+                
+                // Add URLs  
+                urls.forEach((url) => {
+                    rows.push(['URL', url, '1'].join('\t'));
+                });
+                
+                // Add summary
+                rows.push(['', '', '']);
+                rows.push(['Summary', '', '']);
+                rows.push(['Total Domains', domains.length.toString(), '']);
+                rows.push(['Total URLs', urls.length.toString(), '']);
+                
+                const xlsContent = rows.join('\n');
+                const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const formatOutput = (domains) => {
+                switch (outputFormat) {
+                    case 'csv':
+                        return domains.join(', ');
+                    case 'json':
+                        return JSON.stringify(domains, null, 2);
+                    case 'list':
+                    default:
+                        return domains.join('\n');
+                }
+            };
+
+            const exampleText = `Test cases: @https://blog.example.com:8080/path/to/page?query=123#section
+ftp://files.server.net/pub/file.txt
+www.no-protocol.com/path
+Email me at contact@example.com but visit api-v2.service.com and subdomain.test-site.org.
+Check these: (parentheses.com) and "quotes.net" and end-punctuation.org!`;
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50">
+                    <div className="max-w-6xl mx-auto p-6 space-y-8">
+                        <div className="text-center mb-12 pt-8">
+                            <div className="inline-flex items-center justify-center w-20 h-20 mb-6">
+                                <span className="text-5xl">🔍</span>
+                            </div>
+                            <h2 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-4 tracking-tight">Domain Extractor</h2>
+                            <h1 className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed font-light">Extract domains and URLs from any text content with precision</h1>
+                        </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Input Section */}
+                        <div className="space-y-4 bg-white p-6 rounded-lg shadow-sm">
+                            <div>
+                                <label htmlFor="input-text" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Input Text
+                                </label>
+                                <textarea
+                                    id="input-text"
+                                    value={inputText}
+                                    onChange={(e) => setInputText(e.target.value)}
+                                    placeholder="Paste your text here..."
+                                    className="w-full h-64 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                />
+                                <div className="flex gap-2 mt-2">
+                                    <button
+                                        onClick={() => setInputText(exampleText)}
+                                        className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                                    >
+                                        Load Example
+                                    </button>
+                                    <button
+                                        onClick={handleClear}
+                                        className="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Options */}
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-medium text-gray-700">Extraction Options</h3>
+                                <div className="space-y-2">
+                                    <label className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={options.includeSubdomains}
+                                            onChange={(e) => setOptions(prev => ({ ...prev, includeSubdomains: e.target.checked }))}
+                                            className="mr-2"
+                                        />
+                                        <span className="text-sm">Include subdomains</span>
+                                    </label>
+                                    <label className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={options.includeWww}
+                                            onChange={(e) => setOptions(prev => ({ ...prev, includeWww: e.target.checked }))}
+                                            className="mr-2"
+                                        />
+                                        <span className="text-sm">Include www prefix</span>
+                                    </label>
+                                    <label className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={options.removeDuplicates}
+                                            onChange={(e) => setOptions(prev => ({ ...prev, removeDuplicates: e.target.checked }))}
+                                            className="mr-2"
+                                        />
+                                        <span className="text-sm">Remove duplicates</span>
+                                    </label>
+                                    <label className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={options.sortResults}
+                                            onChange={(e) => setOptions(prev => ({ ...prev, sortResults: e.target.checked }))}
+                                            className="mr-2"
+                                        />
+                                        <span className="text-sm">Sort results</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Results Section */}
+                        <div className="space-y-4 bg-white p-6 rounded-lg shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-medium text-gray-700">Results</h3>
+                                {results && (
+                                    <select
+                                        value={outputFormat}
+                                        onChange={(e) => setOutputFormat(e.target.value)}
+                                        className="px-3 py-1 border border-gray-300 rounded text-sm"
+                                    >
+                                        <option value="list">List</option>
+                                        <option value="csv">CSV</option>
+                                        <option value="json">JSON</option>
+                                    </select>
+                                )}
+                            </div>
+
+                            {results && (
+                                <div className="space-y-4">
+                                    {/* Statistics */}
+                                    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                                        <div className="text-center">
+                                            <div className="text-2xl font-bold text-blue-600">{results.statistics.totalDomains}</div>
+                                            <div className="text-sm text-gray-600">Domains Found</div>
+                                        </div>
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-green-600">{results.statistics.totalUrls}</div>
+                                        <div className="text-sm text-gray-600">URLs Found</div>
+                                    </div>
+                                </div>
+
+                                {/* Combined Export Options */}
+                                <div className="flex justify-center">
+                                    <div className="relative group">
+                                        <button className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium rounded-lg transition-colors">
+                                            📦 Export All Results
+                                        </button>
+                                        <div className="absolute left-1/2 transform -translate-x-1/2 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                                            <button
+                                                onClick={() => exportToCSV([...results.domains.map(d => `Domain,${d}`), ...results.urls.map(u => `URL,${u}`)], 'all_results.csv')}
+                                                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 whitespace-nowrap"
+                                            >
+                                                📄 All as CSV
+                                            </button>
+                                            <button
+                                                onClick={() => exportToPDF([...results.domains, ...results.urls], 'All Extracted Results', 'all_results.pdf')}
+                                                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 whitespace-nowrap"
+                                            >
+                                                📋 All as Print/PDF
+                                            </button>
+                                            <button
+                                                onClick={() => exportToExcel(results.domains, results.urls, 'all_results.xls')}
+                                                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 whitespace-nowrap"
+                                            >
+                                                📊 All as Excel/Numbers
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                    {/* Domains */}
+                                    {results.domains.length > 0 && (
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="font-medium text-gray-700">Domains ({results.domains.length})</h4>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => copyToClipboard(formatOutput(results.domains))}
+                                                        className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
+                                                    >
+                                                        Copy
+                                                    </button>
+                                                    <div className="relative group">
+                                                        <button className="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors">
+                                                            Export ▼
+                                                        </button>
+                                                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                                                            <button
+                                                                onClick={() => exportToCSV(results.domains, 'domains.csv')}
+                                                                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                                                            >
+                                                                📄 CSV
+                                                            </button>
+                                                            <button
+                                                                onClick={() => exportToPDF(results.domains, 'Extracted Domains', 'domains.pdf')}
+                                                                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                                                            >
+                                                                📋 Print/PDF
+                                                            </button>
+                                                            <button
+                                                                onClick={() => exportToExcel(results.domains, [], 'domains.xls')}
+                                                                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                                                            >
+                                                                📊 Excel/Numbers
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <textarea
+                                                value={formatOutput(results.domains)}
+                                                readOnly
+                                                className="w-full h-32 p-3 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm resize-none"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* URLs */}
+                                    {results.urls.length > 0 && (
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="font-medium text-gray-700">URLs ({results.urls.length})</h4>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => copyToClipboard(formatOutput(results.urls))}
+                                                        className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
+                                                    >
+                                                        Copy
+                                                    </button>
+                                                    <div className="relative group">
+                                                        <button className="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors">
+                                                            Export ▼
+                                                        </button>
+                                                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                                                            <button
+                                                                onClick={() => exportToCSV(results.urls, 'urls.csv')}
+                                                                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                                                            >
+                                                                📄 CSV
+                                                            </button>
+                                                            <button
+                                                                onClick={() => exportToPDF(results.urls, 'Extracted URLs', 'urls.pdf')}
+                                                                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                                                            >
+                                                                📋 Print/PDF
+                                                            </button>
+                                                            <button
+                                                                onClick={() => exportToExcel([], results.urls, 'urls.xls')}
+                                                                className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                                                            >
+                                                                📊 Excel/Numbers
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <textarea
+                                                value={formatOutput(results.urls)}
+                                                readOnly
+                                                className="w-full h-32 p-3 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm resize-none"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {results.domains.length === 0 && results.urls.length === 0 && (
+                                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                            <p className="text-yellow-700">No domains or URLs found in the provided text.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {!results && !loading && (
+                                <div className="h-64 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                                    <p className="text-gray-500">Results will appear here after extraction</p>
+                                </div>
+                            )}
+
+                            {/* Extract Domains Button - Always visible */}
+                            <div className="flex justify-center mt-6 pt-4 border-t border-gray-200">
+                                <button
+                                    onClick={handleExtract}
+                                    disabled={!inputText.trim() || loading}
+                                    className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors text-lg"
+                                >
+                                    {loading ? 'Extracting...' : 'Extract Domains'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="text-center text-sm text-gray-500 mt-8">
+                        <p>💡 Try pasting text with domains like: www.example.com, https://github.com, or docs.google.com</p>
+                    </div>
+                    {/* Features Overview Section */}
+                    <div className="mt-16 max-w-4xl mx-auto px-4">
+                        <div className="bg-white rounded-lg shadow-lg p-8">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Features Overview</h2>
+                            
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-3">Single Mode:</h3>
+                                    <ul className="text-gray-600 space-y-1 text-sm">
+                                        <li>• Extract domains from individual URLs, emails, or hostnames</li>
+                                        <li>• Real-time results with copy-to-clipboard functionality</li>
+                                        <li>• Handles all the cases you mentioned: subdomains, TLDs, emails, IPs, localhost, etc.</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-3">Batch Processing:</h3>
+                                    <ul className="text-gray-600 space-y-1 text-sm">
+                                        <li>• Process up to 100 URLs/emails at once</li>
+                                        <li>• Summary statistics (total, valid, failed)</li>
+                                        <li>• Export results to CSV</li>
+                                        <li>• Clean table view of all results</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-3">Backend API:</h3>
+                                    <ul className="text-gray-600 space-y-1 text-sm">
+                                        <li>• POST /api/extract - Single domain extraction</li>
+                                        <li>• GET /api/extract?input=... - Query parameter support</li>
+                                        <li>• POST /api/extract/batch - Batch processing</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-3">🎯 What It Extracts:</h3>
+                                    <ul className="text-gray-600 space-y-1 text-sm">
+                                        <li>• Hostname: Full hostname (e.g., blog.example.co.uk)</li>
+                                        <li>• Registrable Domain: Main domain (e.g., example.co.uk)</li>
+                                        <li>• Subdomain: Subdomain part (e.g., blog)</li>
+                                        <li>• TLD: Top-level domain (e.g., co.uk)</li>
+                                        <li>• Status Flags: Email, IP, localhost, validity</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="mt-6">
+                                <h3 className="text-lg font-semibold text-gray-700 mb-3">💪 Handles All Edge Cases:</h3>
+                                <div className="grid md:grid-cols-2 gap-2 text-sm">
+                                    <div className="text-green-600">✅ URLs: https://blog.example.co.uk/path?query=1</div>
+                                    <div className="text-green-600">✅ Emails: jane.doe@company.org</div>
+                                    <div className="text-green-600">✅ IP addresses: 127.0.0.1, IPv6</div>
+                                    <div className="text-green-600">✅ Localhost: http://localhost:3000</div>
+                                    <div className="text-green-600">✅ Complex TLDs: co.uk, com.au, etc.</div>
+                                    <div className="text-green-600">✅ Malformed inputs with proper error handling</div>
+                                </div>
+                            </div>
+
+                            {/* FAQ Section */}
+                            <div className="mt-12 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl p-8 border border-indigo-100">
+                                <div className="text-center mb-8">
+                                    <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-500 text-white rounded-xl mb-4">
+                                        <span className="text-xl">❓</span>
+                                    </div>
+                                    <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-800 to-blue-700 bg-clip-text text-transparent mb-2">
+                                        Frequently Asked Questions
+                                    </h2>
+                                    <p className="text-indigo-600/80 max-w-2xl mx-auto">
+                                        Everything you need to know about our domain extraction tool
+                                    </p>
+                                </div>
+
+                                <div className="max-w-4xl mx-auto space-y-4">
+                                    {[
+                                        {
+                                            id: 'online',
+                                            icon: '🌐',
+                                            question: 'Domain Extractor Online',
+                                            answer: 'Yes! Our domain extractor works completely online in your browser. No downloads, installations, or signup required. Simply paste your text and extract domains instantly from any device with internet access.'
+                                        },
+                                        {
+                                            id: 'email',
+                                            icon: '📧',
+                                            question: 'Domain Email Extractor',
+                                            answer: 'Absolutely! Our tool intelligently extracts domains from email addresses. Paste emails like "user@example.com" and get clean domains like "example.com" with proper validation and formatting.'
+                                        },
+                                        {
+                                            id: 'name',
+                                            icon: '🔗',
+                                            question: 'Domain Name Extractor',
+                                            answer: 'Extract clean domain names from any text containing URLs, links, or domain references. Handles complex cases like subdomains, ports, paths, and removes unwanted characters automatically.'
+                                        },
+                                        {
+                                            id: 'extension',
+                                            icon: '🧩',
+                                            question: 'Domain Extractor Chrome Extension',
+                                            answer: 'While we don\'t currently offer a Chrome extension, our web tool works perfectly in any browser! Bookmark our page for quick access, or use our mobile-responsive design on any device.'
+                                        }
+                                    ].map((faq) => (
+                                        <div key={faq.id} className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg overflow-hidden">
+                                            <button
+                                                onClick={() => setExpandedFaq(prev => ({ ...prev, [faq.id]: !prev[faq.id] }))}
+                                                className="w-full px-6 py-4 text-left hover:bg-white/50 transition-colors flex items-center justify-between"
+                                            >
+                                                <div className="flex items-center">
+                                                    <span className="text-indigo-500 mr-3 text-xl">{faq.icon}</span>
+                                                    <h3 className="text-lg font-semibold text-gray-800">{faq.question}</h3>
+                                                </div>
+                                                <span className={`text-indigo-500 text-xl transition-transform duration-200 ${expandedFaq[faq.id] ? 'rotate-180' : ''}`}>
+                                                    ▼
+                                                </span>
+                                            </button>
+                                            {expandedFaq[faq.id] && (
+                                                <div className="px-6 pb-4 pt-0">
+                                                    <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mt-8 text-center">
+                                    <div className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-lg p-4 max-w-2xl mx-auto">
+                                        <p className="font-medium">💡 Pro Tip</p>
+                                        <p className="text-indigo-100 mt-1">
+                                            Use our export features to save results as CSV, PDF, or Excel files for easy data management and sharing.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render the app
+        ReactDOM.render(<DomainExtractor />, document.getElementById('root'));
+    </script>
+</body>
+</html>

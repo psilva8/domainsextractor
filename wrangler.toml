@@ -1,0 +1,10 @@
+name = "domain-extractor"
+compatibility_date = "2025-09-13"
+
+[assets]
+directory = "./static"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = false
