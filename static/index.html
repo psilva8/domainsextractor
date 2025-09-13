@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+    <head>
+        <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Domain Extractor - Extract domains from URLs and emails</title>
-    <meta name="description" content="Free domain extractor to quickly get domains from any list of URLs or emails. Works online, bulk paste supported.">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='35' cy='35' r='20' fill='none' stroke='%23334155' stroke-width='6'/%3E%3Cpath d='m50 50 20 20' stroke='%23334155' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E" />
+        <title>Domain Extractor - Extract domains from URLs and emails</title>
+        <meta name="description" content="Free domain extractor to quickly get domains from any list of URLs or emails. Works online, bulk paste supported.">
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='35' cy='35' r='20' fill='none' stroke='%23334155' stroke-width='6'/%3E%3Cpath d='m50 50 20 20' stroke='%23334155' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -276,6 +276,69 @@
             color: #6b7280; 
             line-height: 1.6; 
             margin: 0; 
+        }
+        
+        /* Export Dropdown Styles */
+        .export-buttons { 
+            display: flex; 
+            gap: 8px; 
+            align-items: center; 
+        }
+        .export-dropdown { 
+            position: relative; 
+            display: inline-block; 
+        }
+        .export-menu { 
+            position: absolute; 
+            top: 100%; 
+            right: 0; 
+            background: white; 
+            border: 1px solid #e5e7eb; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            opacity: 0; 
+            visibility: hidden; 
+            transform: translateY(-5px); 
+            transition: all 0.2s ease; 
+            z-index: 10; 
+            min-width: 150px; 
+        }
+        .export-dropdown:hover .export-menu { 
+            opacity: 1; 
+            visibility: visible; 
+            transform: translateY(0); 
+        }
+        .export-menu button { 
+            display: block; 
+            width: 100%; 
+            padding: 10px 15px; 
+            background: none; 
+            border: none; 
+            text-align: left; 
+            cursor: pointer; 
+            transition: background 0.2s ease; 
+            font-size: 14px; 
+            color: #374151; 
+        }
+        .export-menu button:hover { 
+            background: #f3f4f6; 
+        }
+        .export-menu button:first-child { 
+            border-radius: 8px 8px 0 0; 
+        }
+        .export-menu button:last-child { 
+            border-radius: 0 0 8px 8px; 
+        }
+        .export-all { 
+            display: flex; 
+            justify-content: center; 
+            margin-top: 15px; 
+        }
+        .result-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 10px; 
         }
     </style>
 </head>
@@ -596,6 +659,16 @@
                 '<div class="stat-number">' + results.statistics.totalUrls + '</div>' +
                 '<div class="stat-label">URLs Found</div>' +
                 '</div>' +
+                '<div class="export-all">' +
+                '<div class="export-dropdown">' +
+                '<button class="btn-primary">📥 Export All Results</button>' +
+                '<div class="export-menu">' +
+                '<button onclick="exportToCSV([...[\'' + results.domains.join('\',\'') + '\'], ...[\'' + results.urls.join('\',\'') + '\']], \'all_results.csv\')">📄 All as CSV</button>' +
+                '<button onclick="exportToPDF([...[\'' + results.domains.join('\',\'') + '\'], ...[\'' + results.urls.join('\',\'') + '\']], \'All Extracted Results\', \'all_results.pdf\')">📋 All as PDF</button>' +
+                '<button onclick="exportToExcel([\'' + results.domains.join('\',\'') + '\'], [\'' + results.urls.join('\',\'') + '\'], \'all_results.xls\')">📊 All as Excel</button>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
                 '</div>';
 
             if (results.domains.length > 0) {
@@ -603,7 +676,17 @@
                     '<div class="result-section">' +
                     '<div class="result-header">' +
                     '<h3>Domains (' + results.domains.length + ')</h3>' +
+                    '<div class="export-buttons">' +
                     '<button class="btn-secondary" onclick="copyToClipboard(\'' + results.domains.join('\\n') + '\', \'Domains\')">Copy</button>' +
+                    '<div class="export-dropdown">' +
+                    '<button class="btn-secondary">⬇️ Export</button>' +
+                    '<div class="export-menu">' +
+                    '<button onclick="exportToCSV([\'' + results.domains.join('\',\'') + '\'], \'domains.csv\')">📄 CSV</button>' +
+                    '<button onclick="exportToPDF([\'' + results.domains.join('\',\'') + '\'], \'Extracted Domains\', \'domains.pdf\')">📋 PDF</button>' +
+                    '<button onclick="exportToExcel([\'' + results.domains.join('\',\'') + '\'], [], \'domains.xls\')">📊 Excel</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
                     '</div>' +
                     '<textarea class="result-textarea" readonly>' + results.domains.join('\n') + '</textarea>' +
                     '</div>';
@@ -614,7 +697,17 @@
                     '<div class="result-section">' +
                     '<div class="result-header">' +
                     '<h3>URLs (' + results.urls.length + ')</h3>' +
+                    '<div class="export-buttons">' +
                     '<button class="btn-secondary" onclick="copyToClipboard(\'' + results.urls.join('\\n') + '\', \'URLs\')">Copy</button>' +
+                    '<div class="export-dropdown">' +
+                    '<button class="btn-secondary">⬇️ Export</button>' +
+                    '<div class="export-menu">' +
+                    '<button onclick="exportToCSV([\'' + results.urls.join('\',\'') + '\'], \'urls.csv\')">📄 CSV</button>' +
+                    '<button onclick="exportToPDF([\'' + results.urls.join('\',\'') + '\'], \'Extracted URLs\', \'urls.pdf\')">📋 PDF</button>' +
+                    '<button onclick="exportToExcel([], [\'' + results.urls.join('\',\'') + '\'], \'urls.xls\')">📊 Excel</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
                     '</div>' +
                     '<textarea class="result-textarea" readonly>' + results.urls.join('\n') + '</textarea>' +
                     '</div>';
@@ -624,11 +717,11 @@
         }
 
         function copyToClipboard(text, label) {
-            navigator.clipboard.writeText(text).then(() => {
+                navigator.clipboard.writeText(text).then(() => {
                 alert(label + ' copied to clipboard!');
-            }).catch(() => {
-                alert('Failed to copy to clipboard');
-            });
+                }).catch(() => {
+                    alert('Failed to copy to clipboard');
+                });
         }
 
         function loadExample() {
@@ -643,6 +736,71 @@
                 '<p>Results will appear here after extraction</p>' +
                 '<p style="font-size: 0.9rem; margin-top: 10px;">Start by pasting some text or loading the example</p>' +
                 '</div>';
+        }
+
+        // Export Functions
+        function exportToCSV(data, filename) {
+                const csvContent = data.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+        }
+
+        function exportToPDF(data, title, filename) {
+                const htmlContent = `
+                  <!DOCTYPE html>
+                <html><head><title>${title}</title>
+                    <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; }
+                    h1 { color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+                    .item { margin: 5px 0; padding: 8px; background: #f9fafb; border-radius: 4px; }
+                    .count { color: #6b7280; font-size: 0.9em; }
+                </style></head>
+                  <body>
+                    <h1>${title}</h1>
+                    <p class="count">Total items: ${data.length}</p>
+                    ${data.map(item => `<div class="item">${item}</div>`).join('')}
+                    <p style="margin-top: 30px; color: #6b7280; font-size: 0.8em;">
+                        Generated by Domain Extractor - ${new Date().toLocaleDateString()}
+                    </p>
+                </body></html>
+            `;
+            
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+                    printWindow.focus();
+            setTimeout(() => printWindow.print(), 250);
+        }
+
+        function exportToExcel(domains, urls, filename) {
+                const headers = ['Type', 'Value', 'Count'];
+                const rows = [headers.join('\t')];
+                
+            domains.forEach((domain, index) => {
+                rows.push(['Domain', domain, index + 1].join('\t'));
+            });
+            
+            urls.forEach((url, index) => {
+                rows.push(['URL', url, index + 1].join('\t'));
+            });
+            
+            const content = rows.join('\n');
+            const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
         }
 
         function toggleFaq(id) {
